@@ -34,6 +34,22 @@ def hits_path():
         return None
     return base / "last_hits.json"
 
+HOMEPAGE_URL = "https://www.sofascore.com/"
+
+def is_homepage(url):
+    """Site root only. Team, player, league, and match URLs are not the homepage."""
+    if not url:
+        return False
+    lower = str(url).strip().lower()
+    while lower.endswith("/"):
+        lower = lower[:-1]
+    return lower in (
+        "https://www.sofascore.com",
+        "http://www.sofascore.com",
+        "https://sofascore.com",
+        "http://sofascore.com",
+    )
+
 def emit(items):
     try:
         cache_path = hits_path()
@@ -47,6 +63,8 @@ def emit(items):
             for it in items:
                 url = it.get("arg")
                 if not url or not str(url).startswith("http"):
+                    continue
+                if is_homepage(url):
                     continue
                 vars_ = it.get("variables") or {}
                 cache[url] = {
@@ -196,9 +214,22 @@ def url_for(typ, ent):
     return "https://www.sofascore.com/", sport
 
 if mode == "recents":
-    items = []
-    for row in load_recents()[:15]:
-        url = row.get("url") or "https://www.sofascore.com/"
+    # Enter on an empty/short query opens the site. Recents stay below it.
+    items = [{
+        "title": "Open Sofascore",
+        "subtitle": "www.sofascore.com",
+        "arg": HOMEPAGE_URL,
+        "valid": True,
+        "variables": {
+            "sofa_title": "Open Sofascore",
+            "sofa_kind": "home",
+        },
+    }]
+    recents = []
+    for row in load_recents():
+        url = row.get("url") or ""
+        if not url or is_homepage(url):
+            continue
         title = row.get("title") or url
         kind = row.get("kind") or "recent"
         eid = row.get("id")
@@ -208,13 +239,17 @@ if mode == "recents":
             it["autocomplete"] = "team:%s " % eid
         if kind in ("uniqueTournament", "tournament", "league") and eid is not None:
             it["autocomplete"] = "league:%s " % eid
-        items.append(it)
-    if not items:
-        items = [{
+        recents.append(it)
+        if len(recents) >= 15:
+            break
+    if recents:
+        items.extend(recents)
+    else:
+        items.append({
             "title": "No recent Sofascore searches yet",
             "subtitle": "Try: sofa liverpool — Tab on a team or league",
             "valid": False,
-        }]
+        })
     emit(items)
     raise SystemExit
 

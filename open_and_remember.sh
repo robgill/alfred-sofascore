@@ -20,15 +20,31 @@ if [[ "$arg" == league:* ]]; then
 fi
 
 url="$arg"
-if [ -z "$url" ] || [[ "$url" != http* ]]; then
+if [ -z "$url" ]; then
+  exit 0
+fi
+
+home_lc="$(printf '%s' "$url" | tr '[:upper:]' '[:lower:]')"
+while [ "$home_lc" != "${home_lc%/}" ]; do
+  home_lc="${home_lc%/}"
+done
+if [[ "$home_lc" != http* ]]; then
   exit 0
 fi
 
 # Setup guide — open only, do not pollute recents
-if [[ "$url" == *"how-to-enable-allow-javascript-from-apple-events"* ]]; then
+if [[ "$home_lc" == *"how-to-enable-allow-javascript-from-apple-events"* ]]; then
   open "$url"
   exit 0
 fi
+
+# Homepage — open only, do not pollute recents
+case "$home_lc" in
+  https://www.sofascore.com|http://www.sofascore.com|https://sofascore.com|http://sofascore.com)
+    open "$url"
+    exit 0
+    ;;
+esac
 
 # Run Script still opens the page if Alfred did not export a data directory.
 if [ -z "$DATA_DIR" ]; then
