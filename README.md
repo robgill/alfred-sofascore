@@ -1,6 +1,6 @@
-# SofaScore Search for Alfred
+# Sofascore Search for Alfred
 
-Search SofaScore for teams, players, leagues, and matches from Alfred — without relying on the old `/search?q=` URL (SofaScore’s site no longer supports that).
+Search Sofascore for teams, players, leagues, and matches from Alfred — without relying on the old `/search?q=` URL (Sofascore’s site no longer supports that).
 
 ![Demo](images/demo.gif)
 
@@ -12,17 +12,17 @@ Two tiny chores, then you’ll be up and searching:
 
 1. **Let Alfred talk to your browser.** Turn on **Allow JavaScript from Apple Events**. If you don't know how to do this, hit ↩ on your first search and it will direct you to some instructions, or Google it if you prefer!
 
-2. **SofaScore needs to be open in a background tab.** Be aware your first search will open the website in the background if you don't already have it open. This shouldn't interrupt your flow, but just be mindful of what is going on.
+2. **Sofascore needs to be open in a background tab.** Be aware your first search will open the website in the background if you don't already have it open. This shouldn't interrupt your flow, but just be mindful of what is going on.
 
 That’s it. No API keys, no accounts. I hope this is useful. If so, consider following me on [X](https://x.com/rob_gill_) — I never post on there, but if you want to get in touch to let me know your thoughts, please do. ;)
 
-> **Note:** Search currently uses **Google Chrome** (Apple Events → JavaScript in a SofaScore tab). Safari/Edge support isn’t in yet.
+> **Note:** Search currently uses **Google Chrome** (Apple Events → JavaScript in a Sofascore tab). Safari/Edge support isn’t in yet.
 
 ## Usage
 
 Keyword: `sofa` (changeable in Workflow Configuration)
 
-* <kbd>↩</kbd> Open the result on SofaScore
+* <kbd>↩</kbd> Open the result on Sofascore
 * <kbd>⇥</kbd> Drill into a team’s squad, or a league’s clubs
 * <kbd>⌘</kbd><kbd>↩</kbd> Same as Tab (squad / clubs)
 
@@ -39,7 +39,7 @@ Tabbing into a team or league also saves it to recents. Type the keyword alone (
 
 ## Privacy
 
-Recents and caches live only on your Mac in Alfred’s Workflow Data folder (`com.robgill.sofascore`). They are not included in the workflow export.
+Recents and caches live only on your Mac, in Alfred’s Workflow Data folder for this workflow (`~/Library/Application Support/Alfred/Workflow Data/com.robgill.sofascore/`). They are not included in the `.alfredworkflow` export.
 
 ## Licence
 

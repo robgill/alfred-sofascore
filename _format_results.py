@@ -197,7 +197,7 @@ if mode == "recents":
         items.append(it)
     if not items:
         items = [{
-            "title": "No recent SofaScore searches yet",
+            "title": "No recent Sofascore searches yet",
             "subtitle": "Try: sofa liverpool — Tab on a team or league",
             "valid": False,
         }]
@@ -228,7 +228,7 @@ else:
 status, body = status.strip(), body.strip()
 if status not in ("200", "201") or not body:
     emit([{
-        "title": "SofaScore HTTP %s" % status,
+        "title": "Sofascore HTTP %s" % status,
         "subtitle": (body or "empty — open sofascore.com in Chrome")[:160],
         "valid": False,
     }])
@@ -237,7 +237,7 @@ if status not in ("200", "201") or not body:
 try:
     data = json.loads(body)
 except Exception:
-    emit([{"title": "Bad JSON from SofaScore", "subtitle": body[:140], "valid": False}])
+    emit([{"title": "Bad JSON from Sofascore", "subtitle": body[:140], "valid": False}])
     raise SystemExit
 
 items = []
