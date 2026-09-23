@@ -30,7 +30,7 @@ Keyword: `sofa` (changeable in Workflow Configuration, along with the browser)
 
 After Tab on a team, type to filter players (for example `ma` for Marcus Rashford). After Tab on a league, type to filter clubs (for example `man` for Manchester City and Manchester United).
 
-Tabbing into a team or league also saves it to recents. Type the keyword alone (with a trailing space) to browse the last 20 results.
+Tabbing into a team or league also saves it to recents. Type the keyword alone (with a trailing space) to browse them. ↩ opens the Sofascore homepage; arrow down or select a recent to open that result.
 
 ## Requirements
 

@@ -237,10 +237,109 @@ grep -q 'alfred_workflow_cache' "$ROOT/sofascore_search.sh" || fail "must read a
 if grep -q 'Application Support' "$ROOT/sofascore_search.sh" "$ROOT/_format_results.py" "$ROOT/open_and_remember.sh"; then
   fail "scripts must not hardcode Application Support"
 fi
-grep -q '<string>1.2.0</string>' "$ROOT/info.plist" || fail "version was not bumped"
+grep -q '<string>1.2.1</string>' "$ROOT/info.plist" || fail "version was not bumped"
+if grep -q '<string>1.2.0</string>' "$ROOT/info.plist"; then
+  fail "info.plist still says 1.2.0"
+fi
 
 # 14. Missing Alfred paths still produce a Script Filter item and do not exit the shell when main is a subprocess.
 missing="$(env -u SOFA_SOURCE_ONLY -u alfred_workflow_data -u alfred_workflow_cache bash "$ROOT/sofascore_search.sh" "liverpool")"
 printf '%s' "$missing" | grep -q 'Alfred did not set workflow paths' || fail "missing env should explain itself"
+
+# 15. Empty and short queries open the homepage first; recents follow. Homepage is not saved.
+reset_state
+data="$(mktemp -d)"
+cache="$(mktemp -d)"
+export alfred_workflow_data="$data"
+export alfred_workflow_cache="$cache"
+cat > "$data/recents.json" <<'JSON'
+[
+  {"url": "https://www.sofascore.com/", "title": "Homepage leftover", "kind": "link"},
+  {"url": "https://www.sofascore.com/football/team/liverpool/44", "title": "Liverpool", "kind": "team", "id": 44, "sport": "football"},
+  {"url": "https://sofascore.com", "title": "Bare homepage", "kind": "link"}
+]
+JSON
+before="$(cat "$data/recents.json")"
+assert_recents_home() {
+  local label="$1"
+  python3 -c '
+import json, sys
+data = json.loads(sys.stdin.read())
+items = data["items"]
+first = items[0]
+if first.get("title") != "Open Sofascore" or first.get("arg") != "https://www.sofascore.com/" or first.get("valid") is not True:
+    raise SystemExit("first item is not the homepage")
+if first.get("subtitle") != "www.sofascore.com":
+    raise SystemExit("homepage subtitle")
+titles = [it.get("title") for it in items]
+if "Homepage leftover" in titles or "Bare homepage" in titles:
+    raise SystemExit("homepage recent was listed")
+if titles[1] != "Liverpool":
+    raise SystemExit("recent did not follow homepage: %s" % titles)
+' <<<"$2" || fail "$label"
+}
+out="$(main "")"
+assert_recents_home "empty query" "$out"
+out="$(main " ")"
+assert_recents_home "blank query" "$out"
+out="$(main "s")"
+assert_recents_home "one-character query" "$out"
+rm -f "$data/recents.json"
+out="$(main "")"
+python3 -c '
+import json, sys
+items = json.loads(sys.stdin.read())["items"]
+if items[0].get("title") != "Open Sofascore" or items[0].get("valid") is not True:
+    raise SystemExit("empty recents missing homepage")
+if items[1].get("title") != "No recent Sofascore searches yet" or items[1].get("valid") is not False:
+    raise SystemExit("empty recents hint missing")
+if len(items) != 2:
+    raise SystemExit("unexpected empty recents items")
+' <<<"$out" || fail "no recents yet"
+
+open_dir="$(mktemp -d)"
+export OPEN_LOG="$(mktemp)"
+cat > "$open_dir/open" <<'EOF'
+#!/bin/bash
+printf '%s\n' "$*" >> "${OPEN_LOG:?}"
+EOF
+chmod +x "$open_dir/open"
+export PATH="$open_dir:$ROOT/tests/bin:$PATH"
+printf '%s\n' "$before" > "$data/recents.json"
+for u in \
+  "https://www.sofascore.com/" \
+  "https://www.sofascore.com" \
+  "http://www.sofascore.com/" \
+  "https://sofascore.com/" \
+  "http://sofascore.com" \
+  "HTTPS://WWW.SOFASCORE.COM/"
+do
+  : > "$OPEN_LOG"
+  alfred_workflow_data="$data" "$ROOT/open_and_remember.sh" "$u"
+  if [ "$(cat "$data/recents.json")" != "$before" ]; then
+    fail "homepage variant was saved: $u"
+  fi
+  assert_eq "$(cat "$OPEN_LOG")" "$u" "homepage variant was not opened: $u"
+done
+guide="https://forum.actions.work/t/how-to-enable-allow-javascript-from-apple-events-in-your-browsers/87"
+: > "$OPEN_LOG"
+alfred_workflow_data="$data" "$ROOT/open_and_remember.sh" "$guide"
+if [ "$(cat "$data/recents.json")" != "$before" ]; then
+  fail "setup guide was saved"
+fi
+: > "$OPEN_LOG"
+alfred_workflow_data="$data" \
+  sofa_title="Liverpool" sofa_kind="team" sofa_id="44" sofa_sport="football" \
+  "$ROOT/open_and_remember.sh" "https://www.sofascore.com/football/team/liverpool/44"
+python3 -c '
+import json, os, sys
+path = sys.argv[1]
+recents = json.loads(open(path).read())
+if not recents or recents[0].get("url") != "https://www.sofascore.com/football/team/liverpool/44":
+    raise SystemExit("team url was not remembered")
+if recents[0].get("title") != "Liverpool":
+    raise SystemExit("team title")
+' "$data/recents.json" || fail "opening a result should still save a recent"
+assert_eq "$(cat "$OPEN_LOG")" "https://www.sofascore.com/football/team/liverpool/44" "team url was not opened"
 
 printf '%s\n' "ok"
