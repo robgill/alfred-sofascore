@@ -106,9 +106,9 @@
 		</dict>
 	</array>
 	<key>readme</key>
-	<string># SofaScore Search for Alfred
+	<string># Sofascore Search for Alfred
 
-Search SofaScore for teams, players, leagues, and matches from Alfred — without relying on the old `/search?q=` URL (SofaScore’s site no longer supports that).
+Search Sofascore for teams, players, leagues, and matches from Alfred — without relying on the old `/search?q=` URL (Sofascore’s site no longer supports that).
 
 ![Demo](images/demo.gif)
 
@@ -120,17 +120,17 @@ Two tiny chores, then you’ll be up and searching:
 
 1. **Let Alfred talk to your browser.** Turn on **Allow JavaScript from Apple Events**. If you don't know how to do this, hit ↩ on your first search and it will direct you to some instructions, or Google it if you prefer!
 
-2. **SofaScore needs to be open in a background tab.** Be aware your first search will open the website in the background if you don't already have it open. This shouldn't interrupt your flow, but just be mindful of what is going on.
+2. **Sofascore needs to be open in a background tab.** Be aware your first search will open the website in the background if you don't already have it open. This shouldn't interrupt your flow, but just be mindful of what is going on.
 
 That’s it. No API keys, no accounts. I hope this is useful. If so, consider following me on [X](https://x.com/rob_gill_) — I never post on there, but if you want to get in touch to let me know your thoughts, please do. ;)
 
-&gt; **Note:** Search currently uses **Google Chrome** (Apple Events → JavaScript in a SofaScore tab). Safari/Edge support isn’t in yet.
+&gt; **Note:** Search currently uses **Google Chrome** (Apple Events → JavaScript in a Sofascore tab). Safari/Edge support isn’t in yet.
 
 ## Usage
 
 Keyword: `sofa` (changeable in Workflow Configuration)
 
-* &lt;kbd&gt;↩&lt;/kbd&gt; Open the result on SofaScore
+* &lt;kbd&gt;↩&lt;/kbd&gt; Open the result on Sofascore
 * &lt;kbd&gt;⇥&lt;/kbd&gt; Drill into a team’s squad, or a league’s clubs
 * &lt;kbd&gt;⌘&lt;/kbd&gt;&lt;kbd&gt;↩&lt;/kbd&gt; Same as Tab (squad / clubs)
 
@@ -147,7 +147,7 @@ Tabbing into a team or league also saves it to recents. Type the keyword alone (
 
 ## Privacy
 
-Recents and caches live only on your Mac in Alfred’s Workflow Data folder (`com.robgill.sofascore`). They are not included in the workflow export.
+Recents and caches live only on your Mac, in Alfred’s Workflow Data folder for this workflow (`~/Library/Application Support/Alfred/Workflow Data/com.robgill.sofascore/`). They are not included in the `.alfredworkflow` export.
 
 ## Licence
 
@@ -185,7 +185,7 @@ MIT
 				<true/>
 			</dict>
 			<key>description</key>
-			<string>Keyword to search SofaScore</string>
+			<string>Keyword to search Sofascore</string>
 			<key>label</key>
 			<string>Keyword</string>
 			<key>type</key>
@@ -197,7 +197,7 @@ MIT
 	<key>variablesdontexport</key>
 	<array/>
 	<key>version</key>
-	<string>1.1.0</string>
+	<string>1.1.1</string>
 	<key>webaddress</key>
 	<string>https://github.com/robgill/alfred-sofascore</string>
 </dict>
