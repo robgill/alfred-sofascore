@@ -218,18 +218,37 @@ if mode == "recents":
     emit(items)
     raise SystemExit
 
+GUIDE_URL = "https://forum.actions.work/t/how-to-enable-allow-javascript-from-apple-events-in-your-browsers/87"
+browser_name = (os.environ.get("SOFA_BROWSER") or "").strip() or "the browser"
+
 if raw.startswith("AS_ERROR::"):
+    detail = raw.split("::", 1)[1].strip()
+    low = detail.lower()
+    js_disabled = (
+        not detail
+        or "javascript" in low
+        or "apple event" in low
+        or "not authorized" in low
+        or "not allowed" in low
+        or "-1743" in low
+    )
+    if js_disabled:
+        title = "Allow JavaScript from Apple Events"
+        subtitle = "↩ Open setup guide (Chrome, Safari, Edge, Brave, Chromium, Vivaldi)"
+    else:
+        title = "Couldn’t control %s" % browser_name
+        subtitle = (detail or "↩ Open setup guide")[:140]
     emit([{
-        "title": "Allow JavaScript from Apple events.",
-        "subtitle": "↩ Open setup guide (Chrome, Safari, Edge, …)",
-        "arg": "https://forum.actions.work/t/how-to-enable-allow-javascript-from-apple-events-in-your-browsers/87",
+        "title": title,
+        "subtitle": subtitle,
+        "arg": GUIDE_URL,
         "valid": True,
     }])
     raise SystemExit
 
 if raw.startswith("JS_ERROR"):
     emit([{
-        "title": "JavaScript error in Chrome",
+        "title": "JavaScript error in %s" % browser_name,
         "subtitle": raw.split("\n", 1)[-1][:160],
         "valid": False,
     }])
@@ -243,7 +262,7 @@ status, body = status.strip(), body.strip()
 if status not in ("200", "201") or not body:
     emit([{
         "title": "Sofascore HTTP %s" % status,
-        "subtitle": (body or "empty — open sofascore.com in Chrome")[:160],
+        "subtitle": (body or ("empty — open sofascore.com in %s" % browser_name))[:160],
         "valid": False,
     }])
     raise SystemExit

@@ -10,17 +10,19 @@ Search Sofascore for teams, players, leagues, and matches from Alfred — withou
 
 Two tiny chores, then you’ll be up and searching:
 
-1. **Let Alfred talk to your browser.** Turn on **Allow JavaScript from Apple Events**. If you don't know how to do this, hit ↩ on your first search and it will direct you to some instructions, or Google it if you prefer!
+1. **Allow JavaScript from Apple Events** in the browser you search with. Supported browsers are **Google Chrome**, **Safari**, **Microsoft Edge**, **Brave Browser**, **Chromium**, and **Vivaldi** — turn that setting on for whichever one you use. If you don't know how, hit ↩ on your first search and it will open the instructions.
 
-2. **Sofascore needs to be open in a background tab.** Be aware your first search will open the website in the background if you don't already have it open. This shouldn't interrupt your flow, but just be mindful of what is going on.
+2. **Keep a Sofascore tab open** in that browser. The first search opens the site in the background when it isn’t already open, and later searches reuse that tab. This shouldn’t interrupt your flow, but just be mindful of what is going on.
+
+Sofascore’s API cannot be called with a direct request — Cloudflare blocks raw HTTP — so search runs as JavaScript inside a Sofascore tab.
+
+Workflow Configuration has a **Browser** setting. Automatic reuses a supported browser that already has Sofascore open. If none does, it uses one that’s already running, then one that’s installed, and otherwise Google Chrome. Pin a browser there if you want a specific one when a new tab has to be opened.
 
 That’s it. No API keys, no accounts. I hope this is useful. If so, consider following me on [X](https://x.com/rob_gill_) — I never post on there, but if you want to get in touch to let me know your thoughts, please do. ;)
 
-> **Note:** Search currently uses **Google Chrome** (Apple Events → JavaScript in a Sofascore tab). Safari/Edge support isn’t in yet.
-
 ## Usage
 
-Keyword: `sofa` (changeable in Workflow Configuration)
+Keyword: `sofa` (changeable in Workflow Configuration, along with the browser)
 
 * <kbd>↩</kbd> Open the result on Sofascore
 * <kbd>⇥</kbd> Drill into a team’s squad, or a league’s clubs
@@ -34,12 +36,13 @@ Tabbing into a team or league also saves it to recents. Type the keyword alone (
 
 - [Alfred](https://www.alfredapp.com/) with Powerpack
 - macOS
-- Google Chrome with **Allow JavaScript from Apple Events** enabled
+- Any one of Google Chrome, Safari, Microsoft Edge, Brave Browser, Chromium, or Vivaldi, with **Allow JavaScript from Apple Events** enabled
+- A Sofascore tab in that browser (Cloudflare blocks a direct API client, so the request has to run in the page)
 - System `python3` (no pip/brew packages)
 
 ## Privacy
 
-Recents live only on your Mac, in Alfred’s per-workflow data folder (`alfred_workflow_data`). Transient squad and league caches live in the workflow cache folder (`alfred_workflow_cache`). Neither is included in the `.alfredworkflow` export.
+Recents live only on your Mac, in Alfred’s Workflow Data for this workflow (bundle `com.robgill.sofascore`). They are not included in the `.alfredworkflow` export. Squad and league lists are temporary files in that workflow’s cache, and those are left out of the export too.
 
 ## Licence
 
