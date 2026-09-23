@@ -39,7 +39,7 @@ Tabbing into a team or league also saves it to recents. Type the keyword alone (
 
 ## Privacy
 
-Recents and caches live only on your Mac, in Alfred’s Workflow Data folder for this workflow (`~/Library/Application Support/Alfred/Workflow Data/com.robgill.sofascore/`). They are not included in the `.alfredworkflow` export.
+Recents live only on your Mac, in Alfred’s per-workflow data folder (`alfred_workflow_data`). Transient squad and league caches live in the workflow cache folder (`alfred_workflow_cache`). Neither is included in the `.alfredworkflow` export.
 
 ## Licence
 
