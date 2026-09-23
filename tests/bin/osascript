@@ -1,0 +1,63 @@
+#!/bin/bash
+# Stand-in for macOS osascript. Records each script and returns canned results
+# from FAKE_RUNNING, FAKE_INSTALLED, FAKE_TABS, and FAKE_XHR_*.
+set -u
+log="${FAKE_OSASCRIPT_LOG:-}"
+script=""
+js_arg=""
+if [ "${1:-}" != "" ] && [ -f "${1:-}" ]; then
+  script="$(cat "$1")"
+  js_arg="${2:-}"
+else
+  script="$(cat)"
+fi
+
+if [ -n "$log" ]; then
+  {
+    printf '%s\n' "===== CALL ====="
+    printf '%s\n' "$script"
+    if [ -n "$js_arg" ]; then
+      printf '%s\n' "----- JS -----"
+      printf '%s\n' "$js_arg"
+    fi
+    printf '%s\n' "===== END ====="
+  } >> "$log"
+fi
+
+if printf '%s' "$script" | grep -q "System Events"; then
+  printf '%s\n' "${FAKE_RUNNING:-}"
+  exit 0
+fi
+
+if printf '%s' "$script" | grep -q "path to application"; then
+  printf '%s\n' "${FAKE_INSTALLED:-}"
+  exit 0
+fi
+
+if printf '%s' "$script" | grep -Eq "execute |do JavaScript"; then
+  if [ -n "${FAKE_XHR_FAIL:-}" ]; then
+    printf '%s\n' "$FAKE_XHR_FAIL" >&2
+    exit 1
+  fi
+  if [ -n "${FAKE_XHR_AS_ERROR:-}" ]; then
+    printf 'AS_ERROR::%s' "$FAKE_XHR_AS_ERROR"
+    exit 0
+  fi
+  printf '%s' "${FAKE_XHR_BODY:-200
+{\"results\":[]}}"
+  exit 0
+fi
+
+if printf '%s' "$script" | grep -q 'contains "sofascore.com"'; then
+  app="$(printf '%s\n' "$script" | sed -n 's/.*tell application "\([^"]*\)".*/\1/p' | head -n 1)"
+  if printf '%s\n' "${FAKE_TABS:-}" | grep -Fxq -- "$app"; then
+    printf '%s' "YES"
+  else
+    printf '%s' "NO"
+  fi
+  exit 0
+fi
+
+printf '%s\n' "unexpected osascript script" >&2
+printf '%s\n' "$script" >&2
+exit 1
