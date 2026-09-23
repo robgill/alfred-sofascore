@@ -1,15 +1,8 @@
 #!/bin/bash
-# Remember + open. Only needs the URL in $1 (works without Alfred variables).
+# Remember + open. Recents use alfred_workflow_data only (no path fallback).
 set -euo pipefail
 arg="${1:-}"
-DIR="$(cd "$(dirname "$0")" && pwd)"
 DATA_DIR="${alfred_workflow_data:-}"
-if [ -z "$DATA_DIR" ]; then
-  DATA_DIR="$HOME/Library/Application Support/Alfred/Workflow Data/com.robgill.sofascore"
-fi
-mkdir -p "$DATA_DIR"
-RECENTS="$DATA_DIR/recents.json"
-HITS="$DATA_DIR/last_hits.json"
 KW="${sofa_keyword:-sofa}"
 
 # Cmd+Enter / browse: team:ID or league:ID
@@ -36,6 +29,16 @@ if [[ "$url" == *"how-to-enable-allow-javascript-from-apple-events"* ]]; then
   open "$url"
   exit 0
 fi
+
+# Run Script still opens the page if Alfred did not export a data directory.
+if [ -z "$DATA_DIR" ]; then
+  open "$url" || true
+  exit 0
+fi
+
+mkdir -p "$DATA_DIR"
+RECENTS="$DATA_DIR/recents.json"
+HITS="$DATA_DIR/last_hits.json"
 
 export SOFA_URL="$url"
 export SOFA_RECENTS="$RECENTS"

@@ -3,42 +3,63 @@ import json, os, pathlib
 
 raw = os.environ.get("SOFA_RAW", "")
 mode = os.environ.get("SOFA_MODE", "search")
-recents_path = pathlib.Path(os.environ.get("SOFA_RECENTS", ""))
+
+def _nonempty_env(name):
+    return (os.environ.get(name) or "").strip()
+
+def workflow_data_dir():
+    raw = _nonempty_env("alfred_workflow_data")
+    if not raw:
+        return None
+    return pathlib.Path(raw)
+
+def recents_file():
+    raw = _nonempty_env("SOFA_RECENTS")
+    if raw:
+        return pathlib.Path(raw)
+    base = workflow_data_dir()
+    if base is None:
+        return None
+    return base / "recents.json"
+
+def hits_path():
+    raw = _nonempty_env("SOFA_HITS")
+    if raw:
+        return pathlib.Path(raw)
+    recents_raw = _nonempty_env("SOFA_RECENTS")
+    if recents_raw:
+        return pathlib.Path(recents_raw).with_name("last_hits.json")
+    base = workflow_data_dir()
+    if base is None:
+        return None
+    return base / "last_hits.json"
 
 def emit(items):
     try:
-        hits_env = os.environ.get("SOFA_HITS", "")
-        if hits_env:
-            cache_path = pathlib.Path(hits_env)
-        elif recents_path:
-            cache_path = recents_path.with_name("last_hits.json")
-        else:
-            cache_path = pathlib.Path(os.environ.get(
-                "alfred_workflow_data",
-                str(pathlib.Path.home() / "Library/Application Support/Alfred/Workflow Data/com.robgill.sofascore"),
-            )) / "last_hits.json"
-        cache = {}
-        if cache_path.exists():
-            try:
-                cache = json.loads(cache_path.read_text())
-            except Exception:
-                cache = {}
-        for it in items:
-            url = it.get("arg")
-            if not url or not str(url).startswith("http"):
-                continue
-            vars_ = it.get("variables") or {}
-            cache[url] = {
-                "url": url,
-                "title": vars_.get("sofa_title") or it.get("title") or url,
-                "kind": vars_.get("sofa_kind") or "link",
-                "id": vars_.get("sofa_id"),
-                "sport": vars_.get("sofa_sport") or "football",
-            }
-        cache_path.parent.mkdir(parents=True, exist_ok=True)
-        if len(cache) > 200:
-            cache = dict(list(cache.items())[-200:])
-        cache_path.write_text(json.dumps(cache))
+        cache_path = hits_path()
+        if cache_path is not None:
+            cache = {}
+            if cache_path.exists():
+                try:
+                    cache = json.loads(cache_path.read_text())
+                except Exception:
+                    cache = {}
+            for it in items:
+                url = it.get("arg")
+                if not url or not str(url).startswith("http"):
+                    continue
+                vars_ = it.get("variables") or {}
+                cache[url] = {
+                    "url": url,
+                    "title": vars_.get("sofa_title") or it.get("title") or url,
+                    "kind": vars_.get("sofa_kind") or "link",
+                    "id": vars_.get("sofa_id"),
+                    "sport": vars_.get("sofa_sport") or "football",
+                }
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            if len(cache) > 200:
+                cache = dict(list(cache.items())[-200:])
+            cache_path.write_text(json.dumps(cache))
     except Exception:
         pass
     print(json.dumps({"items": items}))
@@ -90,21 +111,13 @@ def item(url, title, kind, eid=None, sport="football", subtitle=""):
     return out
 
 def load_recents():
-    if not recents_path.exists():
+    path = recents_file()
+    if path is None or not path.exists():
         return []
     try:
-        return json.loads(recents_path.read_text())
+        return json.loads(path.read_text())
     except Exception:
         return []
-
-
-def hits_path():
-    hits_env = os.environ.get("SOFA_HITS", "")
-    if hits_env:
-        return pathlib.Path(hits_env)
-    if recents_path:
-        return recents_path.with_name("last_hits.json")
-    return pathlib.Path.home() / "Library/Application Support/Alfred/Workflow Data/com.robgill.sofascore/last_hits.json"
 
 def lookup_hit_by_id(eid):
     """Find cached metadata for a team/league id from the last result list."""
@@ -112,7 +125,7 @@ def lookup_hit_by_id(eid):
         return None
     sid = str(eid)
     path = hits_path()
-    if not path.exists():
+    if path is None or not path.exists():
         return None
     try:
         cache = json.loads(path.read_text())
@@ -126,7 +139,8 @@ def lookup_hit_by_id(eid):
 
 def remember_browse(kind, eid, title=None, url=None, sport="football"):
     """Save a team/league when Tab drills in (Script Filter runs; Open action does not)."""
-    if not recents_path:
+    path = recents_file()
+    if path is None:
         return
     # Only on the initial drill-in, not every filter keystroke
     if (os.environ.get("SOFA_NAME_FILTER") or "").strip():
@@ -148,8 +162,8 @@ def remember_browse(kind, eid, title=None, url=None, sport="football"):
     entry = {"url": url, "title": title, "kind": kind, "sport": sport, "id": int(eid) if str(eid).isdigit() else eid}
     recents.insert(0, entry)
     try:
-        recents_path.parent.mkdir(parents=True, exist_ok=True)
-        recents_path.write_text(json.dumps(recents[:20], indent=2))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(recents[:20], indent=2))
     except Exception:
         pass
 

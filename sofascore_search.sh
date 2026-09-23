@@ -2,10 +2,12 @@
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 DATA_DIR="${alfred_workflow_data:-}"
-if [ -z "$DATA_DIR" ]; then
-  DATA_DIR="$HOME/Library/Application Support/Alfred/Workflow Data/com.robgill.sofascore"
+CACHE_DIR="${alfred_workflow_cache:-}"
+if [ -z "$DATA_DIR" ] || [ -z "$CACHE_DIR" ]; then
+  printf '%s\n' '{"items":[{"title":"Alfred did not set workflow paths","subtitle":"alfred_workflow_data and alfred_workflow_cache must be set. Run this Script Filter from Alfred.","valid":false}]}'
+  exit 0
 fi
-mkdir -p "$DATA_DIR"
+mkdir -p "$DATA_DIR" "$CACHE_DIR"
 
 query="${1:-}"
 query="$(printf "%s" "$query" | python3 -c "import sys; print(sys.stdin.read().strip())")"
@@ -112,7 +114,7 @@ elif [[ "$query" == team:* ]]; then
   if [[ "$REST" == *" "* ]]; then
     export SOFA_NAME_FILTER="$(printf "%s" "${REST#* }" | python3 -c "import sys; print(sys.stdin.read().strip())")"
   fi
-  CACHE="$DATA_DIR/squad_${SOFA_TEAM_ID}.json"
+  CACHE="$CACHE_DIR/squad_${SOFA_TEAM_ID}.json"
   if [ -n "${SOFA_NAME_FILTER}" ] && [ -f "$CACHE" ]; then
     export SOFA_RAW="200"$'\n'"$(cat "$CACHE")"
   else
@@ -126,7 +128,7 @@ elif [[ "$query" == league:* ]]; then
   if [[ "$REST" == *" "* ]]; then
     export SOFA_NAME_FILTER="$(printf "%s" "${REST#* }" | python3 -c "import sys; print(sys.stdin.read().strip())")"
   fi
-  CACHE="$DATA_DIR/league_${SOFA_LEAGUE_ID}_teams.json"
+  CACHE="$CACHE_DIR/league_${SOFA_LEAGUE_ID}_teams.json"
   if [ -n "${SOFA_NAME_FILTER}" ] && [ -f "$CACHE" ]; then
     export SOFA_RAW="200"$'\n'"$(cat "$CACHE")"
   else
