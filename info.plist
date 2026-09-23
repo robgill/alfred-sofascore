@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>bundleid</key>
+	<string>com.robgill.sofascore</string>
+	<key>category</key>
+	<string>Internet</string>
+	<key>connections</key>
+	<dict>
+		<key>9EB1A462-5C49-4D23-836A-BD09D9B775BB</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>CF2A0EF3-0E9B-4078-B3FE-23FDE67EB465</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+	</dict>
+	<key>createdby</key>
+	<string>Rob Gill</string>
+	<key>description</key>
+	<string>Search Sofascore from Alfred. Tab into squads or leagues and type to filter.</string>
+	<key>disabled</key>
+	<false/>
+	<key>name</key>
+	<string>Sofascore Search</string>
+	<key>objects</key>
+	<array>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string>./open_and_remember.sh "$1"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>0</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>CF2A0EF3-0E9B-4078-B3FE-23FDE67EB465</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>alfredfiltersresults</key>
+				<false/>
+				<key>alfredfiltersresultsmatchmode</key>
+				<integer>0</integer>
+				<key>argumenttreatemptyqueryasnil</key>
+				<true/>
+				<key>argumenttrimmode</key>
+				<integer>0</integer>
+				<key>argumenttype</key>
+				<integer>1</integer>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>keyword</key>
+				<string>{var:sofa_keyword}</string>
+				<key>queuedelaycustom</key>
+				<integer>3</integer>
+				<key>queuedelayimmediatelyinitially</key>
+				<true/>
+				<key>queuedelaymode</key>
+				<integer>0</integer>
+				<key>queuemode</key>
+				<integer>1</integer>
+				<key>runningsubtext</key>
+				<string></string>
+				<key>script</key>
+				<string>./sofascore_search.sh "$1"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>subtext</key>
+				<string></string>
+				<key>title</key>
+				<string>Sofascore Search</string>
+				<key>type</key>
+				<integer>0</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>9EB1A462-5C49-4D23-836A-BD09D9B775BB</string>
+			<key>version</key>
+			<integer>3</integer>
+		</dict>
+	</array>
+	<key>readme</key>
+	<string># SofaScore Search for Alfred
+
+Search SofaScore for teams, players, leagues, and matches from Alfred — without relying on the old `/search?q=` URL (SofaScore’s site no longer supports that).
+
+![Demo](images/demo.gif)
+
+**Download:** [Latest release](https://github.com/robgill/alfred-sofascore/releases/latest) (grab the `.alfredworkflow` file and double-click to install)
+
+## Setup
+
+Two tiny chores, then you’ll be up and searching:
+
+1. **Let Alfred talk to your browser.** Turn on **Allow JavaScript from Apple Events**. If you don't know how to do this, hit ↩ on your first search and it will direct you to some instructions, or Google it if you prefer!
+
+2. **SofaScore needs to be open in a background tab.** Be aware your first search will open the website in the background if you don't already have it open. This shouldn't interrupt your flow, but just be mindful of what is going on.
+
+That’s it. No API keys, no accounts. I hope this is useful. If so, consider following me on [X](https://x.com/rob_gill_) — I never post on there, but if you want to get in touch to let me know your thoughts, please do. ;)
+
+&gt; **Note:** Search currently uses **Google Chrome** (Apple Events → JavaScript in a SofaScore tab). Safari/Edge support isn’t in yet.
+
+## Usage
+
+Keyword: `sofa` (changeable in Workflow Configuration)
+
+* &lt;kbd&gt;↩&lt;/kbd&gt; Open the result on SofaScore
+* &lt;kbd&gt;⇥&lt;/kbd&gt; Drill into a team’s squad, or a league’s clubs
+* &lt;kbd&gt;⌘&lt;/kbd&gt;&lt;kbd&gt;↩&lt;/kbd&gt; Same as Tab (squad / clubs)
+
+After Tab on a team, type to filter players (for example `ma` for Marcus Rashford). After Tab on a league, type to filter clubs (for example `man` for Manchester City and Manchester United).
+
+Tabbing into a team or league also saves it to recents. Type the keyword alone (with a trailing space) to browse the last 20 results.
+
+## Requirements
+
+- [Alfred](https://www.alfredapp.com/) with Powerpack
+- macOS
+- Google Chrome with **Allow JavaScript from Apple Events** enabled
+- System `python3` (no pip/brew packages)
+
+## Privacy
+
+Recents and caches live only on your Mac in Alfred’s Workflow Data folder (`com.robgill.sofascore`). They are not included in the workflow export.
+
+## Licence
+
+MIT
+</string>
+	<key>uidata</key>
+	<dict>
+		<key>9EB1A462-5C49-4D23-836A-BD09D9B775BB</key>
+		<dict>
+			<key>xpos</key>
+			<real>190.0</real>
+			<key>ypos</key>
+			<real>240.0</real>
+		</dict>
+		<key>CF2A0EF3-0E9B-4078-B3FE-23FDE67EB465</key>
+		<dict>
+			<key>xpos</key>
+			<real>440.0</real>
+			<key>ypos</key>
+			<real>165.0</real>
+		</dict>
+	</dict>
+	<key>userconfigurationconfig</key>
+	<array>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>default</key>
+				<string>sofa</string>
+				<key>placeholder</key>
+				<string>sofa</string>
+				<key>required</key>
+				<true/>
+				<key>trim</key>
+				<true/>
+			</dict>
+			<key>description</key>
+			<string>Keyword to search SofaScore</string>
+			<key>label</key>
+			<string>Keyword</string>
+			<key>type</key>
+			<string>textfield</string>
+			<key>variable</key>
+			<string>sofa_keyword</string>
+		</dict>
+	</array>
+	<key>variablesdontexport</key>
+	<array/>
+	<key>version</key>
+	<string>1.1.0</string>
+	<key>webaddress</key>
+	<string>https://github.com/robgill/alfred-sofascore</string>
+</dict>
+</plist>
