@@ -30,8 +30,8 @@ if printf '%s' "$script" | grep -q "System Events"; then
 fi
 
 if printf '%s' "$script" | grep -q "path to application"; then
-  printf '%s\n' "${FAKE_INSTALLED:-}"
-  exit 0
+  printf '%s\n' "path to application is not allowed" >&2
+  exit 1
 fi
 
 if printf '%s' "$script" | grep -Eq "execute |do JavaScript"; then

@@ -8,6 +8,31 @@ export SOFA_SOURCE_ONLY=1
 # shellcheck disable=SC1091
 source "$ROOT/sofascore_search.sh"
 
+export SOFA_BUNDLE_ROOT
+SOFA_BUNDLE_ROOT="$(mktemp -d)"
+# Keep the real disk check, and point it at bundles created from FAKE_INSTALLED.
+eval "$(declare -f browser_on_disk | sed '1s/browser_on_disk/browser_on_disk_impl/')"
+materialize_fake_apps() {
+  local root="$SOFA_BUNDLE_ROOT" name
+  rm -rf "$root"
+  mkdir -p "$root/Applications" "$root/Home/Applications" "$root/System/Applications"
+  while IFS= read -r name; do
+    [ -n "$name" ] || continue
+    case "$name" in
+      Safari)
+        mkdir -p "$root/System/Applications/Safari.app"
+        ;;
+      *)
+        mkdir -p "$root/Applications/${name}.app"
+        ;;
+    esac
+  done <<< "${FAKE_INSTALLED-}"
+}
+browser_on_disk() {
+  materialize_fake_apps
+  browser_on_disk_impl "$1"
+}
+
 fail() {
   printf 'FAIL: %s\n' "$1" >&2
   printf '%s\n' '--- log ---' >&2
@@ -124,12 +149,19 @@ export FAKE_INSTALLED="Safari"
 ensure_browser
 assert_eq "$SOFA_CHOSEN_BROWSER" "Safari" "Safari is used when it is the only browser"
 
-# 6. Detection found nothing: still try Google Chrome.
+# 6. Nothing on disk: do not invent Google Chrome (that tell opens "Where is …?").
 reset_state
 export FAKE_RUNNING=""
 export FAKE_INSTALLED=""
 ensure_browser
-assert_eq "$SOFA_CHOSEN_BROWSER" "Google Chrome" "Chrome is the last-known-good fallback"
+assert_eq "$SOFA_CHOSEN_BROWSER" "" "must not invent a browser that is not on disk"
+browser_xhr "/api/v1/search/all?q=liverpool" >/dev/null
+if grep 'tell application' "$FAKE_OSASCRIPT_LOG" | grep -v 'System Events' | grep -q .; then
+  fail "must not tell a browser when none is on disk"
+fi
+if grep -q 'Microsoft Edge' "$FAKE_OSASCRIPT_LOG" || grep -q 'Google Chrome' "$FAKE_OSASCRIPT_LOG"; then
+  fail "must not name a missing browser in AppleScript"
+fi
 
 # 7. JS payload stays a synchronous same-origin XHR.
 reset_state
@@ -237,10 +269,15 @@ grep -q 'alfred_workflow_cache' "$ROOT/sofascore_search.sh" || fail "must read a
 if grep -q 'Application Support' "$ROOT/sofascore_search.sh" "$ROOT/_format_results.py" "$ROOT/open_and_remember.sh"; then
   fail "scripts must not hardcode Application Support"
 fi
-grep -q '<string>1.2.1</string>' "$ROOT/info.plist" || fail "version was not bumped"
-if grep -q '<string>1.2.0</string>' "$ROOT/info.plist"; then
-  fail "info.plist still says 1.2.0"
+grep -q '<string>1.2.2</string>' "$ROOT/info.plist" || fail "version was not bumped"
+if grep -q '<string>1.2.1</string>' "$ROOT/info.plist"; then
+  fail "info.plist still says 1.2.1"
 fi
+if grep -v '^[[:space:]]*#' "$ROOT/sofascore_search.sh" | grep -q 'path to application'; then
+  fail "sofascore_search.sh must not call path to application"
+fi
+grep -q 'browser_on_disk' "$ROOT/sofascore_search.sh" || fail "browser_on_disk missing"
+grep -q 'path to application' "$ROOT/README.md" || fail "README should explain path to application"
 
 # 14. Missing Alfred paths still produce a Script Filter item and do not exit the shell when main is a subprocess.
 missing="$(env -u SOFA_SOURCE_ONLY -u alfred_workflow_data -u alfred_workflow_cache bash "$ROOT/sofascore_search.sh" "liverpool")"
@@ -341,5 +378,98 @@ if recents[0].get("title") != "Liverpool":
     raise SystemExit("team title")
 ' "$data/recents.json" || fail "opening a result should still save a recent"
 assert_eq "$(cat "$OPEN_LOG")" "https://www.sofascore.com/football/team/liverpool/44" "team url was not opened"
+
+# 16. A running or pinned browser that is not on disk is never named in AppleScript.
+reset_state
+export FAKE_RUNNING=$'Microsoft Edge\nGoogle Chrome'
+export FAKE_INSTALLED="Google Chrome"
+export FAKE_TABS=""
+export sofa_browser="edge"
+ensure_browser
+assert_eq "$SOFA_CHOSEN_BROWSER" "Google Chrome" "missing Edge must fall through to Chrome on disk"
+if grep -q 'Microsoft Edge' "$FAKE_OSASCRIPT_LOG"; then
+  fail "AppleScript named Microsoft Edge even though it is not on disk"
+fi
+browser_xhr "/api/v1/search/all?q=bra" >/dev/null
+if grep -q 'Microsoft Edge' "$FAKE_OSASCRIPT_LOG"; then
+  fail "XHR named Microsoft Edge even though it is not on disk"
+fi
+printf '%s' "$(xhr_scripts)" | grep -q 'tell application "Google Chrome"' || fail "Chrome on disk should be told"
+
+reset_state
+export FAKE_INSTALLED="Safari"
+export FAKE_RUNNING="Safari"
+probe_tab "Microsoft Edge" && fail "probe_tab should refuse Edge when it is not on disk" || true
+probe_tab "Brave Browser" && fail "probe_tab should refuse Brave when it is not on disk" || true
+probe_tab "Vivaldi" && fail "probe_tab should refuse Vivaldi when it is not on disk" || true
+if grep -q 'tell application' "$FAKE_OSASCRIPT_LOG"; then
+  fail "probe_tab emitted tell application for a browser that is not on disk"
+fi
+
+for missing in "Microsoft Edge" "Brave Browser" "Chromium" "Vivaldi" "Safari"; do
+  reset_state
+  export FAKE_INSTALLED="Google Chrome"
+  export SOFA_CHOSEN_BROWSER="$missing"
+  export SOFA_BROWSER="$missing"
+  browser_xhr "/api/v1/search/all?q=x" >/dev/null
+  if grep -q "tell application \"$missing\"" "$FAKE_OSASCRIPT_LOG"; then
+    fail "browser_xhr told $missing which is not on disk"
+  fi
+  if grep -q 'tell application "' "$FAKE_OSASCRIPT_LOG"; then
+    fail "browser_xhr substituted another tell for missing $missing"
+  fi
+done
+
+# 17. Known bundle paths, including Home Applications and System Safari.
+path_root="$(mktemp -d)"
+mkdir -p "$path_root/Home/Applications/Google Chrome.app"
+mkdir -p "$path_root/System/Applications/Safari.app"
+mkdir -p "$path_root/Applications/Brave Browser.app"
+(
+  SOFA_BUNDLE_ROOT="$path_root"
+  browser_on_disk_impl "Google Chrome"
+) || fail "Chrome in Home/Applications should count"
+(
+  SOFA_BUNDLE_ROOT="$path_root"
+  browser_on_disk_impl "Safari"
+) || fail "Safari in System/Applications should count"
+(
+  SOFA_BUNDLE_ROOT="$path_root"
+  browser_on_disk_impl "Brave Browser"
+) || fail "Brave in /Applications should count"
+if (
+  SOFA_BUNDLE_ROOT="$path_root"
+  browser_on_disk_impl "Microsoft Edge"
+); then
+  fail "missing Edge bundle must not count as installed"
+fi
+mkdir -p "$path_root/Applications/Safari.app"
+(
+  SOFA_BUNDLE_ROOT="$path_root"
+  browser_on_disk_impl "Safari"
+) || fail "Safari in /Applications should count"
+rm -rf "$path_root/System/Applications/Safari.app" "$path_root/Applications/Safari.app"
+if (
+  SOFA_BUNDLE_ROOT="$path_root"
+  browser_on_disk_impl "Safari"
+); then
+  fail "Safari without a bundle must not count"
+fi
+
+# 18. A search with no bundle on disk explains itself and does not blame Chrome.
+reset_state
+export FAKE_RUNNING=""
+export FAKE_INSTALLED=""
+data="$(mktemp -d)"
+cache="$(mktemp -d)"
+export alfred_workflow_data="$data"
+export alfred_workflow_cache="$cache"
+out="$(main "arsenal")"
+printf '%s' "$out" | grep -q 'No supported browser is installed' || fail "missing bundles should say no browser is installed"
+printf '%s' "$out" | grep -q 'Where is' || fail "missing bundles should mention cancelling Where is dialogs"
+printf '%s' "$out" | grep -q 'Google Chrome' && fail "must not claim it tried Google Chrome" || true
+if grep 'tell application' "$FAKE_OSASCRIPT_LOG" | grep -v 'System Events' | grep -q .; then
+  fail "main must not tell a browser when nothing is on disk"
+fi
 
 printf '%s\n' "ok"

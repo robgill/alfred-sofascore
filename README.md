@@ -16,7 +16,7 @@ Two tiny chores, then you’ll be up and searching:
 
 Sofascore’s API cannot be called with a direct request — Cloudflare blocks raw HTTP — so search runs as JavaScript inside a Sofascore tab.
 
-Workflow Configuration has a **Browser** setting. Automatic reuses a supported browser that already has Sofascore open. If none does, it uses one that’s already running, then one that’s installed, and otherwise Google Chrome. Pin a browser there if you want a specific one when a new tab has to be opened.
+Workflow Configuration has a **Browser** setting. Automatic reuses a supported browser that already has Sofascore open. If none does, it uses one that’s already running, then one that’s installed on disk (Google Chrome, then Edge, Brave, Chromium, Vivaldi, then Safari). A browser that is not on disk is never used. Pin a browser there if you want a specific one when a new tab has to be opened. Automatic browser detection no longer uses `path to application`, which could open “Where is …?” for missing browsers. If those dialogs are already open, cancel them all before searching again — they block Apple Events.
 
 That’s it. No API keys, no accounts. I hope this is useful. If so, consider following me on [X](https://x.com/rob_gill_) — I never post on there, but if you want to get in touch to let me know your thoughts, please do. ;)
 
