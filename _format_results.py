@@ -272,7 +272,10 @@ if raw.startswith("AS_ERROR::"):
         subtitle = "↩ Open setup guide (Chrome, Safari, Edge, Brave, Chromium, Vivaldi)"
     else:
         title = "Couldn’t control %s" % browser_name
-        subtitle = (detail or "↩ Open setup guide")[:140]
+        # Open "Where is …?" panels block Apple Events for every browser.
+        detail_text = (detail or "↩ Open setup guide")[:80]
+        hint = "Cancel any open “Where is …?” dialogs; they block Apple Events."
+        subtitle = (detail_text + " " + hint)[:160]
     emit([{
         "title": title,
         "subtitle": subtitle,

@@ -13,7 +13,9 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Preference order when several browsers qualify. Safari is last because it
 # ships on every Mac and would otherwise hide a browser the user installed.
-# Google Chrome remains the last-known-good name if nothing is installed.
+# Only a browser whose .app bundle is on disk is eligible. Never invent a
+# missing name: `path to application` and `tell application` both make
+# Launch Services show a modal "Where is …?" dialog that hangs Alfred.
 BROWSER_ORDER=(
   "Google Chrome"
   "Microsoft Edge"
@@ -108,29 +110,42 @@ APPLESCRIPT
   SOFA_RUNNING="$SOFA_OSA_OUT"
 }
 
-load_installed() {
-  local script
-  script="$(mktemp)"
-  cat > "$script" <<'APPLESCRIPT'
-set names to {"Google Chrome", "Microsoft Edge", "Brave Browser", "Chromium", "Vivaldi", "Safari"}
-set found to {}
-repeat with n in names
-  try
-    set p to POSIX path of (path to application (contents of n))
-    if p is not missing value and p is not "" then set end of found to (contents of n)
-  end try
-end repeat
-if (count of found) is 0 then return ""
-set AppleScript's text item delimiters to linefeed
-return found as text
-APPLESCRIPT
-  invoke_osascript "$script"
-  rm -f "$script"
-  if [ "$SOFA_OSA_STATUS" -ne 0 ]; then
-    SOFA_INSTALLED=""
-    return
+# Candidate bundles for one supported browser. Disk checks only.
+# SOFA_BUNDLE_ROOT redirects the roots in tests; Alfred leaves it unset.
+browser_bundle_paths() {
+  local app="$1"
+  local applications home_applications system_applications
+  if [ -n "${SOFA_BUNDLE_ROOT:-}" ]; then
+    applications="${SOFA_BUNDLE_ROOT}/Applications"
+    home_applications="${SOFA_BUNDLE_ROOT}/Home/Applications"
+    system_applications="${SOFA_BUNDLE_ROOT}/System/Applications"
+  else
+    applications="/Applications"
+    home_applications="${HOME}/Applications"
+    system_applications="/System/Applications"
   fi
-  SOFA_INSTALLED="$SOFA_OSA_OUT"
+  case "$app" in
+    "Google Chrome"|"Microsoft Edge"|"Brave Browser"|"Chromium"|"Vivaldi")
+      printf '%s\n' "${applications}/${app}.app" "${home_applications}/${app}.app"
+      ;;
+    "Safari")
+      printf '%s\n' "${applications}/Safari.app" "${system_applications}/Safari.app"
+      ;;
+  esac
+  return 0
+}
+
+# True when a known .app bundle exists. Does not call AppleScript.
+browser_on_disk() {
+  local app="$1" path
+  is_supported_app "$app" || return 1
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    if [ -d "$path" ]; then
+      return 0
+    fi
+  done < <(browser_bundle_paths "$app")
+  return 1
 }
 
 # YES if a running browser already has a sofascore.com tab. Does not launch.
@@ -138,6 +153,8 @@ probe_tab() {
   local app="$1"
   local script out
   is_supported_app "$app" || return 1
+  # A missing app's `tell` opens "Where is …?". Do not emit the script.
+  browser_on_disk "$app" || return 1
   script="$(mktemp)"
   cat > "$script" <<APPLESCRIPT
 tell application "$app"
@@ -168,7 +185,9 @@ choose_browser() {
   pref="$(normalize_browser_pref)"
   load_running
 
-  if [ -n "$pref" ] && app_in_list "$pref" "$SOFA_RUNNING" && probe_tab "$pref"; then
+  # Automatic and pinned selection both ignore anything not on disk, so a
+  # missing Edge/Brave/etc. is never probed or told.
+  if [ -n "$pref" ] && browser_on_disk "$pref" && app_in_list "$pref" "$SOFA_RUNNING" && probe_tab "$pref"; then
     printf '%s' "$pref"
     return
   fi
@@ -176,30 +195,34 @@ choose_browser() {
     if [ "$b" = "$pref" ]; then
       continue
     fi
-    if app_in_list "$b" "$SOFA_RUNNING" && probe_tab "$b"; then
+    if browser_on_disk "$b" && app_in_list "$b" "$SOFA_RUNNING" && probe_tab "$b"; then
       printf '%s' "$b"
       return
     fi
   done
 
-  load_installed
-  if [ -n "$pref" ] && app_in_list "$pref" "$SOFA_INSTALLED"; then
+  if [ -n "$pref" ] && browser_on_disk "$pref"; then
     printf '%s' "$pref"
     return
   fi
   for b in "${BROWSER_ORDER[@]}"; do
-    if app_in_list "$b" "$SOFA_RUNNING"; then
+    if [ "$b" = "$pref" ]; then
+      continue
+    fi
+    if browser_on_disk "$b" && app_in_list "$b" "$SOFA_RUNNING"; then
       printf '%s' "$b"
       return
     fi
   done
   for b in "${BROWSER_ORDER[@]}"; do
-    if app_in_list "$b" "$SOFA_INSTALLED"; then
+    if [ "$b" = "$pref" ]; then
+      continue
+    fi
+    if browser_on_disk "$b"; then
       printf '%s' "$b"
       return
     fi
   done
-  printf '%s' "Google Chrome"
 }
 
 ensure_browser() {
@@ -228,6 +251,7 @@ print(
 write_chromium_script() {
   local app="$1"
   local script="$2"
+  browser_on_disk "$app" || return 1
   # `mode:normal` is in Chrome's dictionary. Other Chromium browsers share
   # `execute javascript` but a missing `mode` term fails compilation, not the try.
   local new_window="make new window"
@@ -283,6 +307,7 @@ APPLESCRIPT
 
 write_safari_script() {
   local script="$1"
+  browser_on_disk "Safari" || return 1
   cat > "$script" <<'APPLESCRIPT'
 on run argv
   set jsCode to item 1 of argv
@@ -336,17 +361,26 @@ browser_xhr() {
     SOFA_CHOSEN_BROWSER="$(choose_browser)"
   fi
   app="$SOFA_CHOSEN_BROWSER"
-  if ! is_supported_app "$app"; then
-    printf '%s' "AS_ERROR::No supported browser is available"
+  # Never name a browser in AppleScript unless its bundle is on disk.
+  if ! is_supported_app "$app" || ! browser_on_disk "$app"; then
+    printf '%s' "AS_ERROR::No supported browser is installed"
     return 0
   fi
   family="$(browser_family "$app")"
   js="$(xhr_javascript "$api_path")"
   script="$(mktemp)"
   if [ "$family" = "safari" ]; then
-    write_safari_script "$script"
+    if ! write_safari_script "$script"; then
+      rm -f "$script"
+      printf '%s' "AS_ERROR::No supported browser is installed"
+      return 0
+    fi
   else
-    write_chromium_script "$app" "$script"
+    if ! write_chromium_script "$app" "$script"; then
+      rm -f "$script"
+      printf '%s' "AS_ERROR::No supported browser is installed"
+      return 0
+    fi
   fi
   invoke_osascript "$script" "$js"
   rm -f "$script"
